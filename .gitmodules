@@ -1,0 +1,15 @@
+[submodule "diffusion-editor"]
+	path = diffusion-editor
+	url = git@github.com:mirmik/diffusion-editor.git
+[submodule "termin-base"]
+	path = termin-base
+	url = git@github.com:mirmik/termin-base.git
+[submodule "termin-graphics"]
+	path = termin-graphics
+	url = git@github.com:mirmik/termin-graphics.git
+[submodule "termin-gui"]
+	path = termin-gui
+	url = git@github.com:mirmik/termin-gui.git
+[submodule "termin"]
+	path = termin
+	url = git@github.com:mirmik/terminus.git
