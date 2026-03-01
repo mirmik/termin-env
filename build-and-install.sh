@@ -153,6 +153,13 @@ if should_build "gui"; then
     echo "========================================"
     echo ""
     pip install "$SCRIPT_DIR/termin-gui"
+
+    echo ""
+    echo "========================================"
+    echo "  Installing termin-nodegraph (pip)"
+    echo "========================================"
+    echo ""
+    pip install "$SCRIPT_DIR/termin-nodegraph"
 fi
 
 if should_build "app"; then
