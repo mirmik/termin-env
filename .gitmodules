@@ -13,3 +13,6 @@
 [submodule "termin"]
 	path = termin
 	url = git@github.com:mirmik/terminus.git
+[submodule "termin-nodegraph"]
+	path = termin-nodegraph
+	url = git@github.com:mirmik/termin-nodegraph.git
