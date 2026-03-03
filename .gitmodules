@@ -19,3 +19,6 @@
 [submodule "termin-scene"]
 	path = termin-scene
 	url = git@github.com:mirmik/termin-scene.git
+[submodule "termin-inspect"]
+	path = termin-inspect
+	url = git@github.com:mirmik/termin-inspect.git
