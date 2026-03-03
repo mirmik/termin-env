@@ -1,15 +1,17 @@
 #!/usr/bin/env pwsh
 # Build and install all termin libraries in dependency order:
-#   termin-base -> termin-graphics -> termin-gui -> termin
+#   termin-base -> termin-scene -> termin-graphics -> termin-gui -> termin
 #
 # Usage:
 #   .\build-and-install.ps1              # Release build
 #   .\build-and-install.ps1 --debug      # Debug build
 #   .\build-and-install.ps1 --clean      # Clean before build
 #   .\build-and-install.ps1 --only=base  # Build only termin-base
+#   .\build-and-install.ps1 --only=scene # Build only termin-scene
 #   .\build-and-install.ps1 --only=gfx   # Build only termin-graphics
 #   .\build-and-install.ps1 --only=app   # Build only termin
-#   .\build-and-install.ps1 --from=gfx   # Start from termin-graphics (skip base)
+#   .\build-and-install.ps1 --from=scene # Start from termin-scene (skip base)
+#   .\build-and-install.ps1 --from=gfx   # Start from termin-graphics (skip base + scene)
 
 $ErrorActionPreference = "Stop"
 
@@ -28,13 +30,15 @@ function Show-Help {
     Write-Host "  --debug, -d       Debug build"
     Write-Host "  --clean, -c       Clean build directories first"
     Write-Host "  --only=base       Build only termin-base"
+    Write-Host "  --only=scene      Build only termin-scene"
     Write-Host "  --only=gfx        Build only termin-graphics"
     Write-Host "  --only=gui        Build only termin-gui + termin-nodegraph"
     Write-Host "  --only=app        Build only termin"
     Write-Host "  --from=base       Build from termin-base onwards (all)"
-    Write-Host "  --from=gfx        Build from termin-graphics onwards (skip base)"
-    Write-Host "  --from=gui        Build from termin-gui onwards (skip base and gfx)"
-    Write-Host "  --from=app        Build only termin (skip base, gfx, gui)"
+    Write-Host "  --from=scene      Build from termin-scene onwards (skip base)"
+    Write-Host "  --from=gfx        Build from termin-graphics onwards (skip base and scene)"
+    Write-Host "  --from=gui        Build from termin-gui onwards (skip base, scene and gfx)"
+    Write-Host "  --from=app        Build only termin (skip base, scene, gfx, gui)"
     Write-Host "  --help, -h        Show this help"
 }
 
@@ -45,10 +49,12 @@ foreach ($arg in $args) {
         "--clean" { $Clean = $true }
         "-c" { $Clean = $true }
         "--only=base" { $Only = "base" }
+        "--only=scene" { $Only = "scene" }
         "--only=gfx" { $Only = "gfx" }
         "--only=gui" { $Only = "gui" }
         "--only=app" { $Only = "app" }
         "--from=base" { $From = "base" }
+        "--from=scene" { $From = "scene" }
         "--from=gfx" { $From = "gfx" }
         "--from=gui" { $From = "gui" }
         "--from=app" { $From = "app" }
@@ -83,7 +89,8 @@ function Should-Build {
     if ($From) {
         switch ($From) {
             "base" { return $true }
-            "gfx" { return ($Name -ne "base") }
+            "scene" { return ($Name -ne "base") }
+            "gfx" { return ($Name -eq "gfx" -or $Name -eq "gui" -or $Name -eq "app") }
             "gui" { return ($Name -eq "gui" -or $Name -eq "app") }
             "app" { return ($Name -eq "app") }
         }
@@ -153,12 +160,16 @@ function Build-CMakeLib {
         Invoke-Checked { cmake --build $buildDir --config $BuildType --parallel }
         Invoke-Checked { cmake --install $buildDir --config $BuildType }
 
-        Write-Host "Installing $Name Python package..."
-        if ($NoBuildIsolation) {
-            Invoke-Checked { python -m pip install --no-build-isolation . }
-        }
-        else {
-            Invoke-Checked { python -m pip install . }
+        if ($Name -eq "termin-scene") {
+            Write-Host "Skipping Python package install for $Name"
+        } else {
+            Write-Host "Installing $Name Python package..."
+            if ($NoBuildIsolation) {
+                Invoke-Checked { python -m pip install --no-build-isolation . }
+            }
+            else {
+                Invoke-Checked { python -m pip install . }
+            }
         }
 
         Write-Host "$Name installed to $installDir"
@@ -212,6 +223,10 @@ function Build-Termin {
 # Build chain
 if (Should-Build "base") {
     Build-CMakeLib -Name "termin-base" -Dir (Join-Path $ScriptDir "termin-base")
+}
+
+if (Should-Build "scene") {
+    Build-CMakeLib -Name "termin-scene" -Dir (Join-Path $ScriptDir "termin-scene")
 }
 
 if (Should-Build "gfx") {

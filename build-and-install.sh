@@ -1,15 +1,17 @@
 #!/bin/bash
 # Build and install all termin libraries in dependency order:
-#   termin-base -> termin-graphics -> termin-gui -> termin
+#   termin-base -> termin-scene -> termin-graphics -> termin-gui -> termin
 #
 # Usage:
 #   ./make-termin.sh              # Release build
 #   ./make-termin.sh --debug      # Debug build
 #   ./make-termin.sh --clean      # Clean before build
 #   ./make-termin.sh --only=base  # Build only termin-base
+#   ./make-termin.sh --only=scene # Build only termin-scene
 #   ./make-termin.sh --only=gfx   # Build only termin-graphics
 #   ./make-termin.sh --only=app   # Build only termin
-#   ./make-termin.sh --from=gfx   # Start from termin-graphics (skip base)
+#   ./make-termin.sh --from=scene # Start from termin-scene (skip base)
+#   ./make-termin.sh --from=gfx   # Start from termin-graphics (skip base + scene)
 #   ./make-termin.sh --no-parallel  # Disable parallel build jobs
 
 set -e
@@ -28,10 +30,12 @@ for arg in "$@"; do
         --debug|-d)    BUILD_TYPE="Debug" ;;
         --clean|-c)    CLEAN=1 ;;
         --only=base)   ONLY="base" ;;
+        --only=scene)  ONLY="scene" ;;
         --only=gfx)    ONLY="gfx" ;;
         --only=gui)    ONLY="gui" ;;
         --only=app)    ONLY="app" ;;
         --from=base)   FROM="base" ;;
+        --from=scene)  FROM="scene" ;;
         --from=gfx)    FROM="gfx" ;;
         --from=gui)    FROM="gui" ;;
         --from=app)    FROM="app" ;;
@@ -43,13 +47,15 @@ for arg in "$@"; do
             echo "  --debug, -d       Debug build"
             echo "  --clean, -c       Clean build directories first"
             echo "  --only=base       Build only termin-base"
+            echo "  --only=scene      Build only termin-scene"
             echo "  --only=gfx        Build only termin-graphics"
             echo "  --only=gui        Build only termin-gui"
             echo "  --only=app        Build only termin"
             echo "  --from=base       Build from termin-base onwards (all)"
-            echo "  --from=gfx        Build from termin-graphics onwards (skip base)"
-            echo "  --from=gui        Build from termin-gui onwards (skip base and gfx)"
-            echo "  --from=app        Build only termin (skip base, gfx, gui)"
+            echo "  --from=scene      Build from termin-scene onwards (skip base)"
+            echo "  --from=gfx        Build from termin-graphics onwards (skip base and scene)"
+            echo "  --from=gui        Build from termin-gui onwards (skip base, scene and gfx)"
+            echo "  --from=app        Build only termin (skip base, scene, gfx, gui)"
             echo "  --no-parallel     Disable parallel compilation (equivalent to -j1)"
             echo "  --help, -h        Show this help"
             exit 0
@@ -79,7 +85,8 @@ should_build() {
     if [[ -n "$FROM" ]]; then
         case "$FROM" in
             base) return 0 ;;
-            gfx)  [[ "$name" != "base" ]] ;;
+            scene) [[ "$name" != "base" ]] ;;
+            gfx)  [[ "$name" == "gfx" || "$name" == "gui" || "$name" == "app" ]] ;;
             gui)  [[ "$name" == "gui" || "$name" == "app" ]] ;;
             app)  [[ "$name" == "app" ]] ;;
         esac
@@ -117,11 +124,15 @@ build_cmake_lib() {
 
     (cd "$dir" && ./install.sh $INSTALL_ARGS)
 
-    echo "Installing $name Python package..."
-    if [[ "$name" == "termin-graphics" ]]; then
-        pip install --no-build-isolation .
+    if [[ "$name" == "termin-scene" ]]; then
+        echo "Skipping Python package install for $name"
     else
-        pip install .
+        echo "Installing $name Python package..."
+        if [[ "$name" == "termin-graphics" ]]; then
+            pip install --no-build-isolation .
+        else
+            pip install .
+        fi
     fi
 
     echo "$name installed to /usr/local"
@@ -153,6 +164,10 @@ build_termin() {
 # Build chain
 if should_build "base"; then
     build_cmake_lib "termin-base" "$SCRIPT_DIR/termin-base"
+fi
+
+if should_build "scene"; then
+    build_cmake_lib "termin-scene" "$SCRIPT_DIR/termin-scene"
 fi
 
 if should_build "gfx"; then

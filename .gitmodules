@@ -16,3 +16,6 @@
 [submodule "termin-nodegraph"]
 	path = termin-nodegraph
 	url = git@github.com:mirmik/termin-nodegraph.git
+[submodule "termin-scene"]
+	path = termin-scene
+	url = git@github.com:mirmik/termin-scene.git
