@@ -10,6 +10,7 @@
 #   ./make-termin.sh --only=gfx   # Build only termin-graphics
 #   ./make-termin.sh --only=app   # Build only termin
 #   ./make-termin.sh --from=gfx   # Start from termin-graphics (skip base)
+#   ./make-termin.sh --no-parallel  # Disable parallel build jobs
 
 set -e
 
@@ -19,6 +20,8 @@ BUILD_TYPE="Release"
 CLEAN=0
 ONLY=""
 FROM=""
+NO_PARALLEL=0
+BUILD_JOBS="$(nproc)"
 
 for arg in "$@"; do
     case "$arg" in
@@ -32,6 +35,7 @@ for arg in "$@"; do
         --from=gfx)    FROM="gfx" ;;
         --from=gui)    FROM="gui" ;;
         --from=app)    FROM="app" ;;
+        --no-parallel) NO_PARALLEL=1 ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -46,6 +50,7 @@ for arg in "$@"; do
             echo "  --from=gfx        Build from termin-graphics onwards (skip base)"
             echo "  --from=gui        Build from termin-gui onwards (skip base and gfx)"
             echo "  --from=app        Build only termin (skip base, gfx, gui)"
+            echo "  --no-parallel     Disable parallel compilation (equivalent to -j1)"
             echo "  --help, -h        Show this help"
             exit 0
             ;;
@@ -55,6 +60,10 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+if [[ $NO_PARALLEL -eq 1 ]]; then
+    BUILD_JOBS=1
+fi
 
 INSTALL_ARGS=""
 if [[ "$BUILD_TYPE" == "Debug" ]]; then
@@ -104,7 +113,7 @@ build_cmake_lib() {
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
         -DCMAKE_INSTALL_PREFIX="/usr/local"
 
-    cmake --build "$build_dir" -j$(nproc)
+    cmake --build "$build_dir" --parallel "$BUILD_JOBS"
 
     (cd "$dir" && ./install.sh $INSTALL_ARGS)
 
@@ -131,7 +140,11 @@ build_termin() {
     [[ "$BUILD_TYPE" == "Debug" ]] && build_args="--debug"
     [[ $CLEAN -eq 1 ]] && build_args="$build_args --clean"
 
-    "$SCRIPT_DIR/termin/build.sh" $build_args
+    if [[ $NO_PARALLEL -eq 1 ]]; then
+        CMAKE_BUILD_PARALLEL_LEVEL=1 "$SCRIPT_DIR/termin/build.sh" $build_args
+    else
+        "$SCRIPT_DIR/termin/build.sh" $build_args
+    fi
 
     echo "Installing termin to /opt/termin..."
     sudo "$SCRIPT_DIR/termin/install_system.sh"
