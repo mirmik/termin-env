@@ -151,14 +151,48 @@ build_termin() {
     [[ "$BUILD_TYPE" == "Debug" ]] && build_args="--debug"
     [[ $CLEAN -eq 1 ]] && build_args="$build_args --clean"
 
+    # Ensure termin-inspect is discoverable for find_package(termin_inspect).
+    # We install it to /usr/local and pass CMAKE_PREFIX_PATH explicitly.
+    local cmake_prefix="/usr/local"
+    if [[ -n "${CMAKE_PREFIX_PATH:-}" ]]; then
+        cmake_prefix="/usr/local:${CMAKE_PREFIX_PATH}"
+    fi
+
     if [[ $NO_PARALLEL -eq 1 ]]; then
-        CMAKE_BUILD_PARALLEL_LEVEL=1 "$SCRIPT_DIR/termin/build.sh" $build_args
+        CMAKE_BUILD_PARALLEL_LEVEL=1 CMAKE_PREFIX_PATH="$cmake_prefix" "$SCRIPT_DIR/termin/build.sh" $build_args
     else
-        "$SCRIPT_DIR/termin/build.sh" $build_args
+        CMAKE_PREFIX_PATH="$cmake_prefix" "$SCRIPT_DIR/termin/build.sh" $build_args
     fi
 
     echo "Installing termin to /opt/termin..."
     sudo "$SCRIPT_DIR/termin/install_system.sh"
+}
+
+build_termin_inspect() {
+    echo ""
+    echo "========================================"
+    echo "  Building termin-inspect ($BUILD_TYPE)"
+    echo "========================================"
+    echo ""
+
+    cd "$SCRIPT_DIR/termin-inspect"
+
+    local build_dir="build/${BUILD_TYPE}"
+    if [[ $CLEAN -eq 1 ]]; then
+        echo "Cleaning $build_dir..."
+        rm -rf "$build_dir"
+    fi
+
+    mkdir -p "$build_dir"
+
+    cmake -S . -B "$build_dir" \
+        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+        -DCMAKE_INSTALL_PREFIX="/usr/local"
+
+    cmake --build "$build_dir" --parallel "$BUILD_JOBS"
+    sudo cmake --install "$build_dir"
+
+    echo "termin-inspect installed to /usr/local"
 }
 
 # Build chain
@@ -191,6 +225,7 @@ if should_build "gui"; then
 fi
 
 if should_build "app"; then
+    build_termin_inspect
     build_termin
 fi
 
