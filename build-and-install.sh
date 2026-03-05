@@ -106,11 +106,7 @@ build_cmake_lib() {
         echo "Skipping Python package install for $name"
     else
         echo "Installing $name Python package..."
-        if [[ "$name" == "termin-graphics" ]]; then
-            pip install --no-build-isolation .
-        else
-            pip install .
-        fi
+        pip install --no-build-isolation .
     fi
 
     echo "$name installed to ${SDK_PREFIX}"
