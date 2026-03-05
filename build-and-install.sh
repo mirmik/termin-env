@@ -148,7 +148,7 @@ build_cmake_lib() {
     cmake --build "$build_dir" --parallel "$BUILD_JOBS"
     sudo cmake --install "$build_dir"
 
-    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" || "$name" == "termin-mesh" ]]; then
+    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" ]]; then
         echo "Skipping Python package install for $name"
     else
         echo "Installing $name Python package..."

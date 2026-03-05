@@ -19,7 +19,8 @@
 ## 2) Python зависимости (кто от кого зависит)
 
 - `tcbase` (из `termin-base`) зависит от: _нет внутренних python-зависимостей termin-env_.
-- `tgfx` (из `termin-graphics`) зависит от: `tcbase` (+ `numpy` как внешний пакет).
+- `tmesh` (из `termin-mesh`) зависит от: `tcbase` (+ `numpy` как внешний пакет).
+- `tgfx` (из `termin-graphics`) зависит от: `tcbase`, `tmesh` (+ `numpy` как внешний пакет).
 - `tcgui` (из `termin-gui`) зависит от: `tcbase`, `tgfx` (+ `Pillow`, `PyYAML` как внешние пакеты).
 - `termin-nodegraph` (из `termin-nodegraph`) зависит от: `tcbase`, `tgfx`, `tcgui`.
 - `diffusion-editor` (из `diffusion-editor`) зависит от: `tcbase`, `tgfx`, `tcgui` (+ `numpy`, `Pillow`, `diffusers`, `simple-lama-inpainting`, `torch` как внешние пакеты/транзитивные зависимости ML-стека).
