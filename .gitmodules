@@ -31,3 +31,6 @@
 [submodule "termin-mesh"]
 	path = termin-mesh
 	url = git@github.com:mirmik/termin-mesh.git
+[submodule "termin-components"]
+	path = termin-components
+	url = git@github.com:mirmik/termin-components.git

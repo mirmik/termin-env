@@ -190,8 +190,8 @@ build_cmake_lib "termin-graphics" "$SCRIPT_DIR/termin-graphics"
 build_termin_inspect
 build_cmake_lib "termin-scene" "$SCRIPT_DIR/termin-scene"
 build_cmake_lib "termin-collision" "$SCRIPT_DIR/termin-collision"
-build_cmake_lib "termin-components-collision" "$SCRIPT_DIR/termin-components-collision"
-build_cmake_lib "termin-components-mesh" "$SCRIPT_DIR/termin-components-mesh"
+build_cmake_lib "termin-components-collision" "$SCRIPT_DIR/termin-components/termin-components-collision"
+build_cmake_lib "termin-components-mesh" "$SCRIPT_DIR/termin-components/termin-components-mesh"
 
 echo ""
 echo "========================================"
