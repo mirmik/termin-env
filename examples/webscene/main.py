@@ -2,8 +2,8 @@
 """
 Minimal example: termin scene → three.js web visualization.
 
-Builds a simple 3D scene using termin meshes, then serves it
-as a web page via FastAPI + three.js.
+Builds a 3D scene using termin Scene/Entity/MeshComponent,
+extracts mesh data, and serves it as a web page via three.js.
 
 Usage:
     python main.py
@@ -11,10 +11,12 @@ Usage:
 """
 
 import json
-import numpy as np
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
+from termin.visualization.core.scene import Scene
+from termin.visualization.core.entity import Entity
+from termin.mesh import TcMesh, MeshComponent
 from termin.mesh.primitives import (
     CubeMesh,
     UVSphereMesh,
@@ -22,106 +24,105 @@ from termin.mesh.primitives import (
     TorusMesh,
     ConeMesh,
 )
-from tgfx import Mesh3
+from termin.geombase import Pose3
 
 
 STATIC_DIR = Path(__file__).parent / "static"
 HOST = "0.0.0.0"
 PORT = 8000
 
+# Per-entity colors (MeshComponent has no material, so we store separately)
+ENTITY_COLORS = {}
 
-def build_scene() -> list[dict]:
-    """Build scene as a list of mesh objects with transforms and colors."""
-    objects = []
+
+def add_mesh_entity(scene, name, mesh3, pose, color):
+    """Create entity with MeshComponent and add to scene."""
+    entity = Entity(pose=pose, name=name)
+    mc = MeshComponent()
+    mc.mesh = TcMesh.from_mesh3(mesh3, name)
+    entity.add_component(mc)
+    scene.add(entity)
+    ENTITY_COLORS[name] = color
+    return entity
+
+
+def build_scene() -> Scene:
+    """Build a termin scene with several mesh entities."""
+    scene = Scene.create(name="webscene_demo")
 
     # Ground plane (flat cube)
-    objects.append({
-        "name": "ground",
-        "mesh": CubeMesh(size=6.0, y=0.1, z=6.0),
-        "position": [0, -0.55, 0],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.35, 0.55, 0.35],
-    })
+    add_mesh_entity(scene, "ground",
+                    CubeMesh(size=6.0, y=0.1, z=6.0),
+                    Pose3.translation(0, -0.55, 0),
+                    [0.35, 0.55, 0.35])
 
     # Blue cube
-    objects.append({
-        "name": "cube",
-        "mesh": CubeMesh(size=1.0),
-        "position": [-1.5, 0.0, 0.0],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.3, 0.5, 0.8],
-    })
+    add_mesh_entity(scene, "cube",
+                    CubeMesh(size=1.0),
+                    Pose3.identity(),
+                    [0.3, 0.5, 0.8])
 
     # Red sphere
-    objects.append({
-        "name": "sphere",
-        "mesh": UVSphereMesh(radius=0.6, n_meridians=24, n_parallels=16),
-        "position": [0.0, 0.1, 0.0],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.8, 0.25, 0.25],
-    })
+    add_mesh_entity(scene, "sphere",
+                    UVSphereMesh(radius=0.6, n_meridians=24, n_parallels=16),
+                    Pose3.translation(2.0, 0.1, 0.0),
+                    [0.8, 0.25, 0.25])
 
     # Yellow cylinder
-    objects.append({
-        "name": "cylinder",
-        "mesh": CylinderMesh(radius=0.4, height=1.2, segments=24),
-        "position": [1.5, 0.0, 0.0],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.85, 0.75, 0.2],
-    })
+    add_mesh_entity(scene, "cylinder",
+                    CylinderMesh(radius=0.4, height=1.2, segments=24),
+                    Pose3.translation(-2.0, 0.0, 0.0),
+                    [0.85, 0.75, 0.2])
 
     # Purple torus
-    objects.append({
-        "name": "torus",
-        "mesh": TorusMesh(major_radius=0.5, minor_radius=0.15,
-                          major_segments=24, minor_segments=12),
-        "position": [0.0, 0.6, -1.5],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.6, 0.3, 0.7],
-    })
+    add_mesh_entity(scene, "torus",
+                    TorusMesh(major_radius=0.5, minor_radius=0.15,
+                              major_segments=24, minor_segments=12),
+                    Pose3.translation(0.0, 0.6, -2.0),
+                    [0.6, 0.3, 0.7])
 
     # Orange cone
-    objects.append({
-        "name": "cone",
-        "mesh": ConeMesh(radius=0.5, height=1.0, segments=24),
-        "position": [-1.5, 0.0, -1.5],
-        "rotation": [0, 0, 0, 1],
-        "scale": [1, 1, 1],
-        "color": [0.9, 0.5, 0.15],
-    })
+    add_mesh_entity(scene, "cone",
+                    ConeMesh(radius=0.5, height=1.0, segments=24),
+                    Pose3.translation(-2.0, 0.0, -2.0),
+                    [0.9, 0.5, 0.15])
 
-    return objects
+    scene.update(0)
+    return scene
 
 
-def mesh3_to_json(mesh: Mesh3) -> dict:
-    """Convert Mesh3 to JSON-serializable dict for three.js."""
-    data = {
-        "vertices": mesh.vertices.flatten().tolist(),
-        "indices": mesh.triangles.flatten().tolist(),
-    }
-    if mesh.has_normals:
-        data["normals"] = mesh.vertex_normals.flatten().tolist()
-    return data
+def extract_scene_json(scene: Scene) -> str:
+    """Walk the termin scene, extract mesh+transform data as JSON."""
+    objects = []
 
+    for entity in scene.get_all_entities():
+        comp = entity.get_component(MeshComponent)
+        if comp is None:
+            continue
 
-def scene_to_json(objects: list[dict]) -> str:
-    """Serialize scene objects to JSON string."""
-    scene_data = []
-    for obj in objects:
-        scene_data.append({
-            "name": obj["name"],
-            "mesh": mesh3_to_json(obj["mesh"]),
-            "position": obj["position"],
-            "rotation": obj["rotation"],
-            "scale": obj["scale"],
-            "color": obj["color"],
+        mesh = comp.mesh
+        if not mesh.is_valid:
+            continue
+
+        tr = entity.transform
+        pos = tr.local_position()
+        rot = tr.local_rotation()
+        scl = tr.local_scale()
+
+        objects.append({
+            "name": entity.name,
+            "mesh": {
+                "vertices": mesh.vertices.flatten().tolist(),
+                "indices": mesh.triangles.flatten().tolist(),
+                "normals": mesh.vertex_normals.flatten().tolist(),
+            },
+            "position": [pos.x, pos.y, pos.z],
+            "rotation": [rot.x, rot.y, rot.z, rot.w],
+            "scale": [scl.x, scl.y, scl.z],
+            "color": ENTITY_COLORS.get(entity.name, [0.5, 0.5, 0.5]),
         })
-    return json.dumps(scene_data)
+
+    return json.dumps(objects)
 
 
 class SceneHandler(SimpleHTTPRequestHandler):
@@ -142,11 +143,9 @@ class SceneHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(self.scene_json.encode())
         else:
-            # Serve static files
             file_path = STATIC_DIR / self.path.lstrip("/")
             if file_path.is_file():
                 self.send_response(200)
-                suffix = file_path.suffix
                 content_types = {
                     ".js": "application/javascript",
                     ".css": "text/css",
@@ -154,22 +153,23 @@ class SceneHandler(SimpleHTTPRequestHandler):
                     ".json": "application/json",
                 }
                 self.send_header("Content-Type",
-                                 content_types.get(suffix, "application/octet-stream"))
+                                 content_types.get(file_path.suffix, "application/octet-stream"))
                 self.end_headers()
                 self.wfile.write(file_path.read_bytes())
             else:
                 self.send_error(404)
 
     def log_message(self, format, *args):
-        # Quiet logging
         pass
 
 
 def main():
     print("Building termin scene...")
-    objects = build_scene()
-    scene_json = scene_to_json(objects)
-    print(f"  {len(objects)} objects, {len(scene_json)} bytes JSON")
+    scene = build_scene()
+
+    print("Extracting scene data...")
+    scene_json = extract_scene_json(scene)
+    print(f"  {len(json.loads(scene_json))} entities, {len(scene_json)} bytes JSON")
 
     SceneHandler.scene_json = scene_json
 
