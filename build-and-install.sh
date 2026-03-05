@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build and install all termin libraries in dependency order:
-#   termin-base -> termin-mesh -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-components-collision -> termin-components-mesh -> termin-gui -> termin
+#   termin-base -> termin-mesh -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-components-collision -> termin-components-mesh -> termin-components-kinematic -> termin-gui -> termin
 #
 # Usage:
 #   ./make-termin.sh              # Release build
@@ -80,6 +80,8 @@ build_cmake_lib() {
         extra_args+=(-DTERMIN_BUILD_PYTHON=ON)
     elif [[ "$name" == "termin-components-mesh" ]]; then
         extra_args+=(-DTERMIN_BUILD_PYTHON=ON)
+    elif [[ "$name" == "termin-components-kinematic" ]]; then
+        extra_args+=(-DTERMIN_BUILD_PYTHON=ON)
     fi
 
     cmake -S . -B "$build_dir" \
@@ -96,13 +98,14 @@ build_cmake_lib() {
         -Dtermin_collision_DIR="$SDK_PREFIX/lib/cmake/termin_collision" \
         -Dtermin_components_collision_DIR="$SDK_PREFIX/lib/cmake/termin_components_collision" \
         -Dtermin_components_mesh_DIR="$SDK_PREFIX/lib/cmake/termin_components_mesh" \
+        -Dtermin_components_kinematic_DIR="$SDK_PREFIX/lib/cmake/termin_components_kinematic" \
         -DPython_EXECUTABLE="$py_exec" \
         "${extra_args[@]}"
 
     cmake --build "$build_dir" --parallel "$BUILD_JOBS"
     sudo cmake --install "$build_dir"
 
-    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" || "$name" == "termin-components-collision" || "$name" == "termin-components-mesh" ]]; then
+    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" || "$name" == "termin-components-collision" || "$name" == "termin-components-mesh" || "$name" == "termin-components-kinematic" ]]; then
         echo "Skipping Python package install for $name"
     else
         echo "Installing $name Python package..."
@@ -195,6 +198,7 @@ build_cmake_lib "termin-scene" "$SCRIPT_DIR/termin-scene"
 build_cmake_lib "termin-collision" "$SCRIPT_DIR/termin-collision"
 build_cmake_lib "termin-components-collision" "$SCRIPT_DIR/termin-components/termin-components-collision"
 build_cmake_lib "termin-components-mesh" "$SCRIPT_DIR/termin-components/termin-components-mesh"
+build_cmake_lib "termin-components-kinematic" "$SCRIPT_DIR/termin-components/termin-components-kinematic"
 
 echo ""
 echo "========================================"
