@@ -22,6 +22,9 @@
 [submodule "termin-inspect"]
 	path = termin-inspect
 	url = git@github.com:mirmik/termin-inspect.git
+[submodule "termin-collision"]
+	path = termin-collision
+	url = git@github.com:mirmik/termin-collision.git
 [submodule "termin-modules"]
 	path = termin-modules
 	url = git@github.com:mirmik/termin-modules.git
