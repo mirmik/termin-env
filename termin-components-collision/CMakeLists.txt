@@ -4,6 +4,7 @@ project(termin_components_collision LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+option(TERMIN_BUILD_PYTHON "Build Python binding for ColliderComponent" OFF)
 
 find_package(termin_base REQUIRED)
 find_package(termin_scene REQUIRED)
@@ -21,3 +22,28 @@ termin_add_module(
     FIND_DEPS termin_base termin_scene termin_inspect termin_mesh termin_collision
     INSTALL_HEADERS components
 )
+
+if(TERMIN_BUILD_PYTHON)
+    if(NOT Python_EXECUTABLE)
+        if(WIN32)
+            set(Python_EXECUTABLE "python")
+        else()
+            set(Python_EXECUTABLE "python3")
+        endif()
+    endif()
+
+    find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -m nanobind --cmake_dir
+        OUTPUT_VARIABLE nanobind_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    find_package(nanobind CONFIG REQUIRED)
+
+    nanobind_add_module(_components_collision_native NB_SHARED components/collider_component_bindings.cpp)
+    target_link_libraries(_components_collision_native PRIVATE termin_components_collision)
+
+    if(TERMIN_COMPONENTS_COLLISION_PYTHON_PREFIX)
+        install(TARGETS _components_collision_native DESTINATION ${TERMIN_COMPONENTS_COLLISION_PYTHON_PREFIX}/colliders)
+    endif()
+endif()
