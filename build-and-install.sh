@@ -132,6 +132,13 @@ build_cmake_lib() {
         py_exec="$(command -v python || true)"
     fi
 
+    local extra_args=()
+    if [[ "$name" == "termin-scene" ]]; then
+        extra_args+=(-DTERMIN_SCENE_BUILD_PYTHON=ON)
+    elif [[ "$name" == "termin-collision" ]]; then
+        extra_args+=(-DTERMIN_COLLISION_BUILD_PYTHON=ON)
+    fi
+
     cmake -S . -B "$build_dir" \
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
         -DCMAKE_INSTALL_PREFIX="$SDK_PREFIX" \
@@ -143,7 +150,8 @@ build_cmake_lib() {
         -Dtermin_mesh_DIR="$SDK_PREFIX/lib/cmake/termin_mesh" \
         -Dtermin_inspect_DIR="$SDK_PREFIX/lib/cmake/termin_inspect" \
         -Dtermin_scene_DIR="$SDK_PREFIX/lib/cmake/termin_scene" \
-        -DPython_EXECUTABLE="$py_exec"
+        -DPython_EXECUTABLE="$py_exec" \
+        "${extra_args[@]}"
 
     cmake --build "$build_dir" --parallel "$BUILD_JOBS"
     sudo cmake --install "$build_dir"
@@ -224,7 +232,8 @@ build_termin_inspect() {
         -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF \
         -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON \
         -Dtermin_base_DIR="$SDK_PREFIX/lib/cmake/termin_base" \
-        -DPython_EXECUTABLE="$py_exec"
+        -DPython_EXECUTABLE="$py_exec" \
+        -DTERMIN_INSPECT_BUILD_PYTHON=ON
 
     cmake --build "$build_dir" --parallel "$BUILD_JOBS"
     sudo cmake --install "$build_dir"
