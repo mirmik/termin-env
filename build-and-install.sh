@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build and install all termin libraries in dependency order:
-#   termin-base -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-gui -> termin
+#   termin-base -> termin-mesh -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-gui -> termin
 #
 # Usage:
 #   ./make-termin.sh              # Release build
@@ -8,12 +8,14 @@
 #   ./make-termin.sh --clean      # Clean before build
 #   ./make-termin.sh --only=base  # Build only termin-base
 #   ./make-termin.sh --only=scene # Build only termin-scene
+#   ./make-termin.sh --only=mesh  # Build only termin-mesh
 #   ./make-termin.sh --only=collision # Build only termin-collision
 #   ./make-termin.sh --only=gfx   # Build only termin-graphics
 #   ./make-termin.sh --only=app   # Build only termin
-#   ./make-termin.sh --from=scene # Start from termin-scene (skip base)
+#   ./make-termin.sh --from=scene # Start from termin-scene (skip base + mesh + gfx)
 #   ./make-termin.sh --from=collision # Start from termin-collision
-#   ./make-termin.sh --from=gfx   # Start from termin-graphics (skip base + scene)
+#   ./make-termin.sh --from=mesh # Start from termin-mesh
+#   ./make-termin.sh --from=gfx   # Start from termin-graphics (skip base + mesh)
 #   ./make-termin.sh --no-parallel  # Disable parallel build jobs
 
 set -e
@@ -33,12 +35,14 @@ for arg in "$@"; do
         --debug|-d)    BUILD_TYPE="Debug" ;;
         --clean|-c)    CLEAN=1 ;;
         --only=base)   ONLY="base" ;;
+        --only=mesh)   ONLY="mesh" ;;
         --only=scene)  ONLY="scene" ;;
         --only=collision) ONLY="collision" ;;
         --only=gfx)    ONLY="gfx" ;;
         --only=gui)    ONLY="gui" ;;
         --only=app)    ONLY="app" ;;
         --from=base)   FROM="base" ;;
+        --from=mesh)   FROM="mesh" ;;
         --from=scene)  FROM="scene" ;;
         --from=collision) FROM="collision" ;;
         --from=gfx)    FROM="gfx" ;;
@@ -52,15 +56,17 @@ for arg in "$@"; do
             echo "  --debug, -d       Debug build"
             echo "  --clean, -c       Clean build directories first"
             echo "  --only=base       Build only termin-base"
+            echo "  --only=mesh       Build only termin-mesh"
             echo "  --only=scene      Build only termin-scene"
             echo "  --only=collision  Build only termin-collision"
             echo "  --only=gfx        Build only termin-graphics"
             echo "  --only=gui        Build only termin-gui"
             echo "  --only=app        Build only termin"
             echo "  --from=base       Build from termin-base onwards (all)"
-            echo "  --from=scene      Build from termin-scene onwards (skip base)"
+            echo "  --from=mesh       Build from termin-mesh onwards (skip base)"
+            echo "  --from=scene      Build from termin-scene onwards (skip base, mesh and gfx)"
             echo "  --from=collision  Build from termin-collision onwards"
-            echo "  --from=gfx        Build from termin-graphics onwards (skip base and scene)"
+            echo "  --from=gfx        Build from termin-graphics onwards (skip base and mesh)"
             echo "  --from=gui        Build from termin-gui onwards (skip base, scene and gfx)"
             echo "  --from=app        Build only termin (skip base, scene, gfx, gui)"
             echo "  --no-parallel     Disable parallel compilation (equivalent to -j1)"
@@ -87,6 +93,7 @@ should_build() {
     if [[ -n "$FROM" ]]; then
         case "$FROM" in
             base) return 0 ;;
+            mesh) [[ "$name" == "mesh" || "$name" == "gfx" || "$name" == "scene" || "$name" == "collision" || "$name" == "gui" || "$name" == "app" ]] ;;
             gfx)  [[ "$name" == "gfx" || "$name" == "scene" || "$name" == "collision" || "$name" == "gui" || "$name" == "app" ]] ;;
             scene) [[ "$name" == "scene" || "$name" == "collision" || "$name" == "gui" || "$name" == "app" ]] ;;
             collision) [[ "$name" == "collision" || "$name" == "gui" || "$name" == "app" ]] ;;
@@ -133,6 +140,7 @@ build_cmake_lib() {
         -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON \
         -Dtermin_base_DIR="$SDK_PREFIX/lib/cmake/termin_base" \
         -Dtermin_graphics_DIR="$SDK_PREFIX/lib/cmake/termin_graphics" \
+        -Dtermin_mesh_DIR="$SDK_PREFIX/lib/cmake/termin_mesh" \
         -Dtermin_inspect_DIR="$SDK_PREFIX/lib/cmake/termin_inspect" \
         -Dtermin_scene_DIR="$SDK_PREFIX/lib/cmake/termin_scene" \
         -DPython_EXECUTABLE="$py_exec"
@@ -140,7 +148,7 @@ build_cmake_lib() {
     cmake --build "$build_dir" --parallel "$BUILD_JOBS"
     sudo cmake --install "$build_dir"
 
-    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" ]]; then
+    if [[ "$name" == "termin-scene" || "$name" == "termin-collision" || "$name" == "termin-mesh" ]]; then
         echo "Skipping Python package install for $name"
     else
         echo "Installing $name Python package..."
@@ -227,6 +235,10 @@ build_termin_inspect() {
 # Build chain
 if should_build "base"; then
     build_cmake_lib "termin-base" "$SCRIPT_DIR/termin-base"
+fi
+
+if should_build "mesh"; then
+    build_cmake_lib "termin-mesh" "$SCRIPT_DIR/termin-mesh"
 fi
 
 if should_build "gfx"; then
