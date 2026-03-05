@@ -142,6 +142,9 @@ build_termin() {
 
     echo "Installing termin to ${SDK_PREFIX}..."
     sudo "$SCRIPT_DIR/termin/install_system.sh"
+
+    echo "Installing termin Python package (editable)..."
+    CMAKE_PREFIX_PATH="$SDK_PREFIX" pip install --no-build-isolation -e "$SCRIPT_DIR/termin"
 }
 
 build_termin_inspect() {
