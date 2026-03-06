@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build and install all termin libraries in dependency order:
-#   termin-base -> termin-mesh -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-components-collision -> termin-components-mesh -> termin-components-kinematic -> termin-gui -> termin
+#   termin-nanobind-sdk -> termin-base -> termin-mesh -> termin-graphics -> termin-inspect -> termin-scene -> termin-collision -> termin-components-collision -> termin-components-mesh -> termin-components-kinematic -> termin-gui -> termin
 #
 # Usage:
 #   ./make-termin.sh              # Release build
@@ -109,10 +109,49 @@ build_cmake_lib() {
         echo "Skipping Python package install for $name"
     else
         echo "Installing $name Python package..."
-        pip install --no-build-isolation .
+        CMAKE_PREFIX_PATH="$SDK_PREFIX" pip install --no-build-isolation .
     fi
 
     echo "$name installed to ${SDK_PREFIX}"
+}
+
+build_nanobind_sdk() {
+    echo ""
+    echo "========================================"
+    echo "  Building termin-nanobind-sdk ($BUILD_TYPE)"
+    echo "========================================"
+    echo ""
+
+    cd "$SCRIPT_DIR/termin-nanobind-sdk"
+
+    local build_dir="build/${BUILD_TYPE}"
+    if [[ $CLEAN -eq 1 ]]; then
+        echo "Cleaning $build_dir..."
+        rm -rf "$build_dir"
+    fi
+
+    mkdir -p "$build_dir"
+
+    local py_exec
+    py_exec="$(command -v python3 || true)"
+    if [[ -z "$py_exec" ]]; then
+        py_exec="$(command -v python || true)"
+    fi
+
+    if ! "$py_exec" -c "import nanobind" >/dev/null 2>&1; then
+        echo "Installing nanobind Python package for SDK bootstrap..."
+        pip install nanobind
+    fi
+
+    cmake -S . -B "$build_dir" \
+        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+        -DCMAKE_INSTALL_PREFIX="$SDK_PREFIX" \
+        -DPython_EXECUTABLE="$py_exec"
+
+    cmake --build "$build_dir" --parallel "$BUILD_JOBS"
+    sudo cmake --install "$build_dir"
+
+    echo "termin-nanobind-sdk installed to ${SDK_PREFIX}"
 }
 
 build_termin() {
@@ -190,6 +229,7 @@ build_termin_inspect() {
 }
 
 # Build chain
+build_nanobind_sdk
 build_cmake_lib "termin-base" "$SCRIPT_DIR/termin-base"
 build_cmake_lib "termin-mesh" "$SCRIPT_DIR/termin-mesh"
 build_cmake_lib "termin-graphics" "$SCRIPT_DIR/termin-graphics"

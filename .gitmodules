@@ -34,3 +34,6 @@
 [submodule "termin-components"]
 	path = termin-components
 	url = git@github.com:mirmik/termin-components.git
+[submodule "termin-nanobind-sdk"]
+	path = termin-nanobind-sdk
+	url = git@github.com:mirmik/termin-nanobind-sdk.git
